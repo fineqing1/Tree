@@ -1,121 +1,72 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(PlayerModel))]
 public class PlayerController : MonoBehaviour
 {
-    public PlayerModel playerModel;
-    [HideInInspector]
-    public bool isLeft;
-    [HideInInspector]
-    public bool isRight;
+    [SerializeField] LayerMask groundLayers = 1;
+    [SerializeField] float groundCheckDistance = 0.15f;
+    [SerializeField] float coyoteTime = 0.12f;
+    [SerializeField] float jumpBuffer = 0.2f;
 
-    private bool isGrounded;
-    private Rigidbody2D rb;
+    Rigidbody2D rb;
+    BoxCollider2D col;
+    PlayerModel model;
 
-    public LayerMask groundLayer;
-    public Transform groundCheck;
-    public float groundCheckRadius = 0.2f;
+    float lastGroundedTime = -100f;
+    float lastJumpPressedTime = -100f;
 
-    public GameObject pauseUI;
-    private void Awake()
+    void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        
+        col = GetComponent<BoxCollider2D>();
+        model = GetComponent<PlayerModel>();
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        playerModel = GetComponent<PlayerModel>();
-        if (pauseUI != null)
-            pauseUI.SetActive(false);
-    }
-
-    // Update is called once per frame
     void Update()
     {
-        HandleInput();
-        
-        HandleJump();
-        HandleCasting();
-        HandlePause();
+        if (Input.GetKeyDown(KeyCode.Space))
+            lastJumpPressedTime = Time.time;
     }
 
     void FixedUpdate()
     {
-        HandleMove();
-        CheckGround();
-    }
+        float move = 0f;
+        if (Input.GetKey(KeyCode.A)) move -= 1f;
+        if (Input.GetKey(KeyCode.D)) move += 1f;
 
-    // 1️⃣ 输入处理
-    void HandleInput()
-    {
-        isLeft = Input.GetKey(KeyCode.A);
-        isRight = Input.GetKey(KeyCode.D);
-    }
+        rb.velocity = new Vector2(move * model.moveSpeed, rb.velocity.y);
 
-    // 2️⃣ 移动
-    void HandleMove()
-    {
-        float h = 0;
-        if (isLeft) h = -1;
-        if (isRight) h = 1;
+        bool grounded = IsGrounded();
+        if (grounded)
+            lastGroundedTime = Time.time;
 
-        rb.velocity = new Vector2(h * playerModel.moveSpeed, rb.velocity.y);
-    }
-
-    // 3️⃣ 检测地面
-    void CheckGround()
-    {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-    }
-
-    // 4️⃣ 跳跃
-    void HandleJump()
-    {
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        bool bufferedJump = Time.time - lastJumpPressedTime <= jumpBuffer;
+        bool coyote = Time.time - lastGroundedTime <= coyoteTime;
+        if (bufferedJump && coyote && rb.velocity.y < 0.25f)
         {
-            rb.velocity = new Vector2(rb.velocity.x, playerModel.jumpForce);
+            rb.velocity = new Vector2(rb.velocity.x, model.jumpForce);
+            lastGroundedTime = -100f;
+            lastJumpPressedTime = -100f;
         }
     }
 
-    // 5️⃣ 施法
-    void HandleCasting()
+    bool IsGrounded()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log("繁盛施法！");
-            // TODO: 触发繁盛施法动画或技能逻辑
-        }
-        if (Input.GetMouseButtonDown(1))
-        {
-            Debug.Log("枯萎施法！");
-            // TODO: 触发枯萎施法动画或技能逻辑
-        }
-    }
+        if (col.IsTouchingLayers(groundLayers))
+            return true;
 
-    // 6️⃣ 暂停
-    void HandlePause()
-    {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (pauseUI != null)
-            {
-                bool isActive = pauseUI.activeSelf;
-                pauseUI.SetActive(!isActive);
-                Time.timeScale = isActive ? 1f : 0f;
-            }
-        }
-    }
-    private void OnDrawGizmosSelected()
-    {
-        if (groundCheck != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
-        }
+        Bounds b = col.bounds;
+        Vector2 origin = new Vector2(b.center.x, b.min.y - 0.03f);
+        RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, groundCheckDistance, groundLayers);
+        if (hit.collider != null && hit.collider.gameObject != gameObject)
+            return true;
+
+        float half = b.extents.x * 0.85f;
+        RaycastHit2D hitL = Physics2D.Raycast(new Vector2(b.center.x - half, b.min.y - 0.03f), Vector2.down, groundCheckDistance, groundLayers);
+        RaycastHit2D hitR = Physics2D.Raycast(new Vector2(b.center.x + half, b.min.y - 0.03f), Vector2.down, groundCheckDistance, groundLayers);
+        return (hitL.collider != null && hitL.collider.gameObject != gameObject)
+            || (hitR.collider != null && hitR.collider.gameObject != gameObject);
     }
 }
-
-
