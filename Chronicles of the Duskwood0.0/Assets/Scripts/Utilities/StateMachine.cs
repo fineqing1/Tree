@@ -6,7 +6,7 @@ using Unity.IO.LowLevel.Unsafe;
 using UnityEditor;
 
 
-// ×´Ì¬»ú£¨Ö»¸ºÔðÇÐ»»£©
+// ×´Ì¬ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½
 public class StateMachine
 {
     private StateBase currentState;

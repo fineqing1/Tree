@@ -166,8 +166,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7a91b2d5e4f3a1089012345dead0002, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gridWidth: 26
-  gridHeight: 18
+  gridWidth: 40
+  gridHeight: 30
   cellWidth: 1
   cellHeight: 1
   gridOrigin: {x: -13, y: -9, z: 0}
@@ -175,7 +175,7 @@ MonoBehaviour:
   waterTile: {fileID: 1573608295426866938, guid: 3f8e396fffad7094492f137b123c03c1, type: 3}
   treeTile: {fileID: 7099611537864367695, guid: 30dd49bef86097d43b3c1a271e29ffcd, type: 3}
   levelSceneNamePrefix: 'Level '
-  targetLevelScene: {fileID: 102900000, guid: f00df00df00df00df00df00df00df00d, type: 3}
+  targetLevelScene: {fileID: 102900000, guid: bfe52b3738fbe1d4f8fdb450f097f8eb, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

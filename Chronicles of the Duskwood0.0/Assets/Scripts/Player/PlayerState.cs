@@ -15,12 +15,12 @@ public abstract class PlayerState : StateBase
     public virtual void Update() { }
     public virtual void Exit() { }
 
-    // ¹«¹²¸¨Öú·½·¨£º´¦ÀíÊ©·¨ÏûºÄ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     protected bool CanCast(int cost)
     {
         if (player.currentFuel >= cost)
         {
-            player.currentFuel -= cost; // ¿Û³ýÏûºÄ
+            player.currentFuel -= cost; // ï¿½Û³ï¿½ï¿½ï¿½ï¿½ï¿½
             return true;
         }
         return false;

@@ -13,9 +13,9 @@ GameObject:
   - component: {fileID: 481648287358340947}
   - component: {fileID: 1197188851974488425}
   - component: {fileID: 7485728588173826017}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -99,7 +99,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 1
-  m_Mass: 1
+  m_Mass: 0.80999994
   m_LinearDrag: 0
   m_AngularDrag: 0.05
   m_GravityScale: 1
@@ -114,8 +114,8 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!61 &1197188851974488425
-BoxCollider2D:
+--- !u!70 &1197188851974488425
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -147,18 +147,8 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 1, y: 1}
-    adaptiveTilingThreshold: 0.5
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
+  m_Size: {x: 0.9, y: 0.9}
+  m_Direction: 0
 --- !u!114 &7485728588173826017
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,13 +163,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHp: 100
   currentHP: 100
-  maxFuel: 100
-  currentFuel: 100
+  maxFuel: 1000
+  currentFuel: 1000
   moveSpeed: 5
-  jumpForce: 6
+  jumpForce: 8
+  magicBallPrefab: {fileID: 655032594647971812, guid: f84bc6b3af1b5a449abc62789f91c81b, type: 3}
   groundLayers:
     serializedVersion: 2
     m_Bits: 1
   groundCheckDistance: 0.15
   coyoteTime: 0.12
   jumpBuffer: 0.2
+  rb: {fileID: 0}
+  col: {fileID: 0}
+  lastGroundedTime: -100
+  lastJumpPressedTime: -100
