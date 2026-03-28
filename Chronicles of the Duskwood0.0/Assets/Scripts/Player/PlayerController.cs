@@ -1,3 +1,4 @@
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 /*
 [RequireComponent(typeof(Rigidbody2D))]
@@ -82,7 +83,7 @@ public class PlayerController : MonoBehaviour
     }
 }
 */
-using UnityEngine;
+
 using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -139,14 +140,24 @@ public class PlayerController : MonoBehaviour
         {
             Die();
         }
-    }
+    
+}
 
     public void TakeDamage(float amount)
     {
         if (isDead) return;
 
         currentHP -= amount;
-        Debug.Log($"玩家受到伤害！剩余血量: {currentHP}");
+
+        // 使用富文本让日志在 Console 里显示为红色，更加醒目
+        // "F2" 表示保留两位小数
+        Debug.Log($"<color=red>【受击】</color> 玩家扣除血量: {amount:F2} | 当前剩余总血量: <color=yellow>{currentHP:F2}</color>");
+
+        if (currentHP <= 0)
+        {
+            currentHP = 0; // 防止显示负数
+            Die();
+        }
 
         // 此处可以添加受击反馈，如闪红光、屏幕震动等
     }
