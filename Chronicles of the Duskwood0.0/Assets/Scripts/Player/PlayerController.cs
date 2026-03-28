@@ -83,6 +83,7 @@ public class PlayerController : MonoBehaviour
 }
 */
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
@@ -90,9 +91,9 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Stats")]
     public int maxHp = 100;
-    public int currentHP = 100;
+    public float currentHP = 100f; // 改为 float，因为敌人伤害是随时间平滑扣除的
     public int maxFuel = 100;
-    public int currentFuel = 100;
+    public float currentFuel = 100f;
 
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
@@ -113,7 +114,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector] public float lastJumpPressedTime = -100f;
 
     private StateMachine stateMachine;
-
+    private bool isDead = false;
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -129,7 +130,34 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (isDead) return;
+
         stateMachine.Update();
+
+        // 死亡检测
+        if (currentHP <= 0)
+        {
+            Die();
+        }
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (isDead) return;
+
+        currentHP -= amount;
+        Debug.Log($"玩家受到伤害！剩余血量: {currentHP}");
+
+        // 此处可以添加受击反馈，如闪红光、屏幕震动等
+    }
+    private void Die()
+    {
+        isDead = true;
+        Debug.Log("玩家已死亡！");
+
+        // 简单的死亡处理：重启当前关卡
+        // 或者可以弹出死亡 UI
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     // 将原本的IsGrounded保留在Controller供State调用

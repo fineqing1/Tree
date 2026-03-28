@@ -1,85 +1,4 @@
 using UnityEngine;
-/*
-using UnityEngine;
-
-public interface IInteractable
-{
-    void OnFlourish(); // 繁盛响应
-    void OnWither();   // 枯萎响应
-}
-
-public class MagicProjectile : MonoBehaviour
-{
-    public enum MagicType { Flourish, Wither }
-    public MagicType type;
-
-    [Header("Attributes")]
-    public float originalSpeed = 10f;
-    public float accelerate = -2f;
-    public float gravity = 1f;
-    public float lifeTime = 5f; // 自动销毁时间
-
-    private Vector2 velocity;
-
-    public void Launch(Vector2 direction)
-    {
-        velocity = direction.normalized * originalSpeed;
-        // 5秒后如果不撞击也自动销毁
-        Destroy(gameObject, lifeTime);
-    }
-
-    void Update()
-    {
-        // 1. 速度计算
-        float speed = velocity.magnitude;
-        speed += accelerate * Time.deltaTime;
-        if (speed < 0) speed = 0;
-
-        velocity = velocity.normalized * speed;
-
-        // 2. 重力影响
-        velocity.y -= gravity * Time.deltaTime;
-
-        // 3. 应用位移
-        transform.position += (Vector3)velocity * Time.deltaTime;
-
-        // 可选：让球体旋转指向飞行方向
-        if (velocity.sqrMagnitude > 0.1f)
-        {
-            float angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg;
-            transform.rotation = Quaternion.Euler(0, 0, angle);
-        }
-    }
-
-    // 关键：碰撞处理（防穿墙）
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        // 1. 忽略玩家（防止球一出生就撞到自己销毁）
-        if (other.CompareTag("Player")) return;
-
-        // 2. 检查是否撞到了机关
-        IInteractable interactable = other.GetComponent<IInteractable>();
-        if (interactable != null)
-        {
-            if (type == MagicType.Flourish) interactable.OnFlourish();
-            else interactable.OnWither();
-            Destroy(gameObject);
-            return;
-        }
-
-        // 3. 检查层级（防穿墙）
-        // 这里确保 Default 层能被识别。如果地板确实是 Default，代码没问题。
-        // 但建议专门为地板建一个层叫 "Ground"，在 Inspector 里把地板改过去。
-        int layerMask = LayerMask.GetMask("Ground", "Default");
-        if (((1 << other.gameObject.layer) & layerMask) != 0)
-        {
-            Destroy(gameObject);
-        }
-    }
-    
-}*/
-
-using UnityEngine;
 public interface IInteractable
 {
     void OnFlourish(); // 繁盛响应
@@ -146,3 +65,4 @@ public class MagicProjectile : MonoBehaviour
         // 提示：撞到普通墙壁时，物理材质会自动处理反弹，不需要在这里写代码销毁
     }
 }
+

@@ -20,7 +20,7 @@ public abstract class PlayerState : StateBase
     {
         if (player.currentFuel >= cost)
         {
-            player.currentFuel -= cost;
+            player.currentFuel -= cost; // ¿Û³ıÏûºÄ
             return true;
         }
         return false;
