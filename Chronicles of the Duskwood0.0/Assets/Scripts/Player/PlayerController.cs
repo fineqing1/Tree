@@ -2,9 +2,19 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
-[RequireComponent(typeof(PlayerModel))]
 public class PlayerController : MonoBehaviour
 {
+    [Header("Stats")]
+    public int maxHp = 100;
+    public int currentHP = 100;
+    public int maxFuel = 100;
+    public int currentFuel = 100;
+
+    [Header("Movement")]
+    public float moveSpeed = 5f;
+    public float jumpForce = 12f;
+
+    [Header("Ground")]
     [SerializeField] LayerMask groundLayers = 1;
     [SerializeField] float groundCheckDistance = 0.15f;
     [SerializeField] float coyoteTime = 0.12f;
@@ -12,7 +22,6 @@ public class PlayerController : MonoBehaviour
 
     Rigidbody2D rb;
     BoxCollider2D col;
-    PlayerModel model;
 
     float lastGroundedTime = -100f;
     float lastJumpPressedTime = -100f;
@@ -21,7 +30,6 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
-        model = GetComponent<PlayerModel>();
     }
 
     void Update()
@@ -36,7 +44,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKey(KeyCode.A)) move -= 1f;
         if (Input.GetKey(KeyCode.D)) move += 1f;
 
-        rb.velocity = new Vector2(move * model.moveSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(move * moveSpeed, rb.velocity.y);
 
         bool grounded = IsGrounded();
         if (grounded)
@@ -46,7 +54,7 @@ public class PlayerController : MonoBehaviour
         bool coyote = Time.time - lastGroundedTime <= coyoteTime;
         if (bufferedJump && coyote && rb.velocity.y < 0.25f)
         {
-            rb.velocity = new Vector2(rb.velocity.x, model.jumpForce);
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             lastGroundedTime = -100f;
             lastJumpPressedTime = -100f;
         }
