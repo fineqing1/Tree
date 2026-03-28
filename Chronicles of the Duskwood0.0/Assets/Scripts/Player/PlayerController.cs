@@ -1,5 +1,5 @@
 using UnityEngine;
-
+/*
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(BoxCollider2D))]
 public class PlayerController : MonoBehaviour
@@ -26,10 +26,13 @@ public class PlayerController : MonoBehaviour
     float lastGroundedTime = -100f;
     float lastJumpPressedTime = -100f;
 
+    private StateMachine stateMachine;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
+        stateMachine = new StateMachine();
     }
 
     void Update()
@@ -76,5 +79,71 @@ public class PlayerController : MonoBehaviour
         RaycastHit2D hitR = Physics2D.Raycast(new Vector2(b.center.x + half, b.min.y - 0.03f), Vector2.down, groundCheckDistance, groundLayers);
         return (hitL.collider != null && hitL.collider.gameObject != gameObject)
             || (hitR.collider != null && hitR.collider.gameObject != gameObject);
+    }
+}
+*/
+using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(BoxCollider2D))]
+public class PlayerController : MonoBehaviour
+{
+    [Header("Stats")]
+    public int maxHp = 100;
+    public int currentHP = 100;
+    public int maxFuel = 100;
+    public int currentFuel = 100;
+
+    [Header("Movement Settings")]
+    public float moveSpeed = 5f;
+    public float jumpForce = 12f;
+
+    [Header("Magic Settings")]
+    public GameObject magicBallPrefab; // 请在Inspector拖入预制体
+
+    [Header("Ground Check")]
+    public LayerMask groundLayers = 1;
+    public float groundCheckDistance = 0.15f;
+    public float coyoteTime = 0.12f;
+    public float jumpBuffer = 0.2f;
+
+    [HideInInspector] public Rigidbody2D rb;
+    [HideInInspector] public BoxCollider2D col;
+    [HideInInspector] public float lastGroundedTime = -100f;
+    [HideInInspector] public float lastJumpPressedTime = -100f;
+
+    private StateMachine stateMachine;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        col = GetComponent<BoxCollider2D>();
+
+        stateMachine = new StateMachine();
+        stateMachine.AddState(typeof(PlayerIdleState), new PlayerIdleState(this, stateMachine));
+        stateMachine.AddState(typeof(FlourishCastState), new FlourishCastState(this, stateMachine));
+        stateMachine.AddState(typeof(WitherCastState), new WitherCastState(this, stateMachine));
+
+        stateMachine.ChangeState<PlayerIdleState>();
+    }
+
+    void Update()
+    {
+        stateMachine.Update();
+    }
+
+    // 将原本的IsGrounded保留在Controller供State调用
+    public bool IsGrounded()
+    {
+        if (col.IsTouchingLayers(groundLayers)) return true;
+        Bounds b = col.bounds;
+        Vector2 origin = new Vector2(b.center.x, b.min.y - 0.03f);
+        RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, groundCheckDistance, groundLayers);
+        if (hit.collider != null && hit.collider.gameObject != gameObject) return true;
+
+        float half = b.extents.x * 0.85f;
+        RaycastHit2D hitL = Physics2D.Raycast(new Vector2(b.center.x - half, b.min.y - 0.03f), Vector2.down, groundCheckDistance, groundLayers);
+        RaycastHit2D hitR = Physics2D.Raycast(new Vector2(b.center.x + half, b.min.y - 0.03f), Vector2.down, groundCheckDistance, groundLayers);
+        return (hitL.collider != null && hitL.collider.gameObject != gameObject) || (hitR.collider != null && hitR.collider.gameObject != gameObject);
     }
 }
