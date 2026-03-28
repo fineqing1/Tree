@@ -1,5 +1,5 @@
 using UnityEngine;
-
+/*
 public class TreePlatform : MonoBehaviour, IMagicInteractable
 {
     [Header("∏ﬂ∂»…Ë÷√")]
@@ -23,4 +23,4 @@ public class TreePlatform : MonoBehaviour, IMagicInteractable
         Vector3 targetPos = initialPos + Vector3.up * targetHeight;
         transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * moveSpeed);
     }
-}
+}*/

@@ -1,3 +1,4 @@
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 /*
 [RequireComponent(typeof(Rigidbody2D))]
@@ -86,12 +87,12 @@ public class PlayerController : MonoBehaviour
 using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(CapsuleCollider2D))]
+[RequireComponent(typeof(BoxCollider2D))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Stats")]
     public int maxHp = 100;
-    public float currentHP = 100f;
+    public float currentHP = 100f; // 改为 float，因为敌人伤害是随时间平滑扣除的
     public int maxFuel = 100;
     public float currentFuel = 100f;
 
@@ -100,7 +101,7 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 12f;
 
     [Header("Magic Settings")]
-    public GameObject magicBallPrefab;
+    public GameObject magicBallPrefab; // 请在Inspector拖入预制体
 
     [Header("Ground Check")]
     public LayerMask groundLayers = 1;
@@ -109,7 +110,7 @@ public class PlayerController : MonoBehaviour
     public float jumpBuffer = 0.2f;
 
     [HideInInspector] public Rigidbody2D rb;
-    [HideInInspector] public CapsuleCollider2D col;
+    [HideInInspector] public BoxCollider2D col;
     [HideInInspector] public float lastGroundedTime = -100f;
     [HideInInspector] public float lastJumpPressedTime = -100f;
 
@@ -118,7 +119,7 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        col = GetComponent<CapsuleCollider2D>();
+        col = GetComponent<BoxCollider2D>();
 
         stateMachine = new StateMachine();
         stateMachine.AddState(typeof(PlayerIdleState), new PlayerIdleState(this, stateMachine));
@@ -134,11 +135,13 @@ public class PlayerController : MonoBehaviour
 
         stateMachine.Update();
 
+        // 死亡检测
         if (currentHP <= 0)
         {
             Die();
         }
-    }
+    
+}
 
     public void TakeDamage(float amount)
     {
@@ -146,26 +149,32 @@ public class PlayerController : MonoBehaviour
 
         currentHP -= amount;
 
-        Debug.Log($"[Player] Damage taken: {amount:F2}, HP remaining: {currentHP:F2}");
+        // 使用富文本让日志在 Console 里显示为红色，更加醒目
+        // "F2" 表示保留两位小数
+        Debug.Log($"<color=red>【受击】</color> 玩家扣除血量: {amount:F2} | 当前剩余总血量: <color=yellow>{currentHP:F2}</color>");
 
         if (currentHP <= 0)
         {
-            currentHP = 0;
+            currentHP = 0; // 防止显示负数
             Die();
         }
+
+        // 此处可以添加受击反馈，如闪红光、屏幕震动等
     }
     private void Die()
     {
         isDead = true;
-        Debug.Log("[Player] Dead - reloading scene");
+        Debug.Log("玩家已死亡！");
 
+        // 简单的死亡处理：重启当前关卡
+        // 或者可以弹出死亡 UI
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    // 将原本的IsGrounded保留在Controller供State调用
     public bool IsGrounded()
     {
-        // ???? IsTouchingLayers????????????????? Ground????????????/coyote??
-        // ???????????????????
+        if (col.IsTouchingLayers(groundLayers)) return true;
         Bounds b = col.bounds;
         Vector2 origin = new Vector2(b.center.x, b.min.y - 0.03f);
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, groundCheckDistance, groundLayers);

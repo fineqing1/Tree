@@ -1,9 +1,10 @@
 using UnityEngine;
 public interface IInteractable
 {
-    void OnFlourish(); // ï¿½ï¿½Ê¢ï¿½ï¿½Ó¦
-    void OnWither();   // ï¿½ï¿½Î®ï¿½ï¿½Ó¦
+    void OnFlourish(); // ·±Ê¢ÏìÓ¦
+    void OnWither();   // ¿ÝÎ®ÏìÓ¦
 }
+/*
 [RequireComponent(typeof(Rigidbody2D))]
 public class MagicProjectile : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class MagicProjectile : MonoBehaviour
 
     [Header("Attributes")]
     public float originalSpeed = 10f;
-    public float accelerate = -2f; // ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ù»ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê©ï¿½Ó¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+    public float accelerate = -2f; // ÕâÀïµÄ¼õËÙ»áÍ¨¹ý´úÂëÊ©¼Ó¸øÎïÀíËÙ¶È
     public float lifeTime = 5f;
 
     private Rigidbody2D rb;
@@ -24,45 +25,128 @@ public class MagicProjectile : MonoBehaviour
 
     public void Launch(Vector2 direction)
     {
-        // Ö±ï¿½Ó¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+        if (rb == null) rb = GetComponent<Rigidbody2D>();
         rb.velocity = direction.normalized * originalSpeed;
-        Destroy(gameObject, lifeTime);
+
+        // --- ÊÓ¾õ·´À¡ (¿ÉÑ¡) ---
+        // ÈÃÄãÒ»ÑÛ¿´³öÉä³öµÄÊÇÄÄÖÖÇò
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.color = (type == MagicType.Flourish) ? Color.green : Color.magenta;
+        }
     }
 
-    void FixedUpdate() // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ØµÄ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ FixedUpdate
+    void FixedUpdate() // ÎïÀíÏà¹ØµÄ¼ÆËã·ÅÔÚ FixedUpdate
     {
         if (rb.velocity.sqrMagnitude > 0.01f)
         {
-            // 1. Êµï¿½Ö¼ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ (1.1.2.1.1.1.2)
+            // 1. ÊµÏÖ¼õËÙÂß¼­ (1.1.2.1.1.1.2)
             float speed = rb.velocity.magnitude;
             speed += accelerate * Time.fixedDeltaTime;
             if (speed < 0) speed = 0;
             rb.velocity = rb.velocity.normalized * speed;
 
-            // 2. ï¿½ï¿½×ªÖ¸ï¿½ï¿½ï¿½ï¿½Ð·ï¿½ï¿½ï¿½
+            // 2. Ðý×ªÖ¸Ïò·ÉÐÐ·½Ïò
             float angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0, 0, angle);
         }
     }
 
-    // ×¢ï¿½â£ºï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½Ø¡ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
+    // ×¢Òâ£º·´µ¯Ð§¹ûÓÉÎïÀí²ÄÖÊ´¦Àí£¬ÕâÀïÖ»´¦Àí¡°×²µ½»ú¹Ø¡±µÄÂß¼­
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // 1. ºöÂÔÍæ¼Ò
         if (collision.gameObject.CompareTag("Player")) return;
 
-        // 2. ï¿½ï¿½ï¿½Ô»ï¿½È¡ï¿½ï¿½ï¿½Ø½Ó¿ï¿½
+        // 2. ³¢ÊÔ»ñÈ¡»ú¹Ø½Ó¿Ú
         IInteractable interactable = collision.gameObject.GetComponent<IInteractable>();
         if (interactable != null)
         {
             if (type == MagicType.Flourish) interactable.OnFlourish();
             else interactable.OnWither();
 
-            // ×²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            // ×²µ½»ú¹ØÍ¨³£²»ÐèÒª·´µ¯£¬Ö±½ÓÉúÐ§²¢Ïú»Ù
             Destroy(gameObject);
         }
 
-        // ï¿½ï¿½Ê¾ï¿½ï¿½×²ï¿½ï¿½ï¿½ï¿½Í¨Ç½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ÌáÊ¾£º×²µ½ÆÕÍ¨Ç½±ÚÊ±£¬ÎïÀí²ÄÖÊ»á×Ô¶¯´¦Àí·´µ¯£¬²»ÐèÒªÔÚÕâÀïÐ´´úÂëÏú»Ù
+    }
+}*/
+[RequireComponent(typeof(Rigidbody2D))]
+public class MagicProjectile : MonoBehaviour
+{
+    public enum MagicType { Flourish, Wither }
+    public MagicType type;
+
+    [Header("Attributes")]
+    public float originalSpeed = 10f;
+    public float accelerate = -2f;
+    public float lifeTime = 5f;
+    public int maxBounces = 3; // ×î´ó·´µ¯´ÎÊý
+
+    private Rigidbody2D rb;
+    private int currentBounces = 0;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        Destroy(gameObject, lifeTime);
+    }
+
+    public void Launch(Vector2 direction)
+    {
+        if (rb == null) rb = GetComponent<Rigidbody2D>();
+        rb.velocity = direction.normalized * originalSpeed;
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.color = (type == MagicType.Flourish) ? Color.green : Color.magenta;
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (rb.velocity.sqrMagnitude > 0.01f)
+        {
+            float speed = rb.velocity.magnitude;
+            speed += accelerate * Time.fixedDeltaTime;
+            if (speed < 0) speed = 0;
+            rb.velocity = rb.velocity.normalized * speed;
+
+            float angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        // 1. ºöÂÔÍæ¼Ò
+        if (collision.gameObject.CompareTag("Player")) return;
+
+        // 2. ³¢ÊÔ»ñÈ¡»ú¹Ø½Ó¿Ú IInteractable
+        IInteractable interactable = collision.gameObject.GetComponent<IInteractable>();
+
+        if (interactable != null)
+        {
+            // ÃüÖÐÖ²Îï£º´¥·¢¶ÔÓ¦Âß¼­
+            if (type == MagicType.Flourish) interactable.OnFlourish();
+            else interactable.OnWither();
+
+            Debug.Log($"<color=cyan>[Ä§·¨¼¤»î]</color> Ä¿±ê: {collision.gameObject.name}");
+            Destroy(gameObject);
+            return;
+        }
+
+        // 3. Ã»×²µ½Ö²Îï£¬Ö´ÐÐÆÕÍ¨·´µ¯¼ÆÊý
+        currentBounces++;
+        if (currentBounces > maxBounces)
+        {
+            Destroy(gameObject);
+        }
+        Debug.Log($"Ä§·¨Çò·´µ¯({currentBounces}): {collision.gameObject.name}");
     }
 }
-

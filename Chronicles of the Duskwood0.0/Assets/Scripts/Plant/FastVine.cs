@@ -1,46 +1,77 @@
 using UnityEngine;
 using System.Collections;
 
-public class FastVine : MonoBehaviour, IMagicInteractable
+// 必须实现 IInteractable 接口才能接收交互
+public class FastVine : MonoBehaviour, IInteractable
 {
-    [Header("生长属性")]
-    public float maxLong = 5f;        // 最大长度
-    public float growSpeed = 2f;      // 生长速度
+    [Header("生长配置")]
+    [Tooltip("勾选则向上顶(地板往天长)，不勾选则向下吊(天花板往地长)")]
+    public bool isUpward = false;
+    [Tooltip("初始状态那一小截藤蔓的长度，建议设为 1")]
+    public float minLength = 1f;
+    [Tooltip("繁茂状态下的最大长度")]
+    public float maxLength = 5f;
+    [Tooltip("生长/枯萎的速度")]
+    public float growSpeed = 5f;
 
     [Header("引用")]
-    public Transform vineVisual;      // 藤蔓的视觉物体（确保其 Pivot 在顶部）
-    public DistanceJoint2D connectedJoint; // 连接平台的物理组件
+    [Tooltip("T字的竖线：Pivot 必须在顶部(吊)或底部(顶)")]
+    public Transform vineStem;
+    [Tooltip("T字的横杠平台：Rigidbody2D 必须设为 Kinematic，且删掉 Joint 组件")]
+    public Transform platformTop;
 
-    private float currentLength = 0f;
+    private float currentLength;        // 当前长度
     private Coroutine growCoroutine;
-    private bool isFlourishing = false;
+    private bool isFlourishing = false; // 当前是否处于繁茂（伸长）状态
 
     private void Awake()
     {
-        // 初始状态：长度为0，关闭物理连接
-        if (vineVisual != null) vineVisual.localScale = new Vector3(1, 0, 1);
-        if (connectedJoint != null) connectedJoint.enabled = false;
+        // 确保物体本身有 Collider 2D 用于接收魔法球交互
+        if (GetComponent<Collider2D>() == null && vineStem == null)
+        {
+            Debug.LogWarning("FastVine物体本身或VineStem子物体缺少Collider2D，玩家可能无法发射魔法球命中交互！");
+        }
+
+        // 初始化长度为那一小截
+        currentLength = minLength;
+        // 初始确保坐标对齐
+        UpdateVineVisual(currentLength);
     }
 
-    public void ApplyMagic(MagicEffectType type)
+    // --- 临时按键测试：方便你在没有魔法球时测试功能 ---
+    private void Update()
     {
-        if (type == MagicEffectType.Flourish)
+        if (Input.GetKeyDown(KeyCode.H)) // 按 H 键触发生长
         {
-            if (!isFlourishing)
-            {
-                StopActiveCoroutine();
-                growCoroutine = StartCoroutine(GrowRoutine(maxLong));
-                isFlourishing = true;
-            }
+            OnFlourish();
         }
-        else // Wither
+        if (Input.GetKeyDown(KeyCode.J)) // 按 J 键触发枯萎
         {
-            if (isFlourishing)
-            {
-                StopActiveCoroutine();
-                growCoroutine = StartCoroutine(GrowRoutine(0f));
-                isFlourishing = false;
-            }
+            OnWither();
+        }
+    }
+
+    // 实现 IInteractable 的 OnFlourish 方法
+    public void OnFlourish()
+    {
+        if (!isFlourishing)
+        {
+            StopActiveCoroutine();
+            growCoroutine = StartCoroutine(GrowRoutine(maxLength));
+            isFlourishing = true;
+            Debug.Log("<color=green>藤蔓接受魔法，开始向上/下喷涌生长...</color>");
+        }
+    }
+
+    // 实现 IInteractable 的 OnWither 方法
+    public void OnWither()
+    {
+        if (isFlourishing)
+        {
+            StopActiveCoroutine();
+            growCoroutine = StartCoroutine(GrowRoutine(minLength));
+            isFlourishing = false;
+            Debug.Log("<color=gray>藤蔓受到凋零，缩回至初始小节...</color>");
         }
     }
 
@@ -48,38 +79,29 @@ public class FastVine : MonoBehaviour, IMagicInteractable
     {
         while (!Mathf.Approximately(currentLength, targetLength))
         {
-            // 平滑改变当前长度
             currentLength = Mathf.MoveTowards(currentLength, targetLength, growSpeed * Time.deltaTime);
-
-            // 更新视觉：假设藤蔓是垂直向下长的，修改 Y 轴缩放
-            if (vineVisual != null)
-            {
-                // 注意：这里假设你的 Sprite 默认高度是 1 单位
-                vineVisual.localScale = new Vector3(1, currentLength, 1);
-            }
-
-            // 更新物理：如果是 DistanceJoint，我们可以动态改变其距离
-            if (connectedJoint != null)
-            {
-                if (currentLength > 0.1f) // 稍微长出来一点再开启物理
-                {
-                    connectedJoint.enabled = true;
-                    // 让 Joint 的长度跟随藤蔓长度，达到“吊起”或“放下”的效果
-                    connectedJoint.distance = currentLength;
-                }
-                else
-                {
-                    connectedJoint.enabled = false;
-                }
-            }
-
+            UpdateVineVisual(currentLength);
             yield return null;
         }
+    }
 
-        // 枯萎到最后直接关闭物理，防止物理残留
-        if (currentLength <= 0.01f && connectedJoint != null)
+    private void UpdateVineVisual(float length)
+    {
+        // 1. 竖线生长：只要图片的 Pivot 设置正确.
+        if (vineStem != null)
         {
-            connectedJoint.enabled = false;
+            vineStem.localScale = new Vector3(1, length, 1);
+        }
+
+        // 2. 【核心修复】横杠位置同步：完全由代码驱动坐标，放弃Joint
+        if (platformTop != null)
+        {
+            // 假设父物体(0,0)，如果是上顶，平台在(0, length)；如果是下吊，平台在(0, -length)
+            float yPos = isUpward ? length : -length;
+            platformTop.localPosition = new Vector3(0, yPos, 0);
+
+            // 初始 minLength 时是否显示平台由你决定
+            platformTop.gameObject.SetActive(true);
         }
     }
 

@@ -1,5 +1,5 @@
 using UnityEngine;
-
+/*
 public class Duckweed : MonoBehaviour, IMagicInteractable
 {
     public Vector3 growScale = new Vector3(3, 1, 1);
@@ -9,4 +9,4 @@ public class Duckweed : MonoBehaviour, IMagicInteractable
     {
         transform.localScale = (type == MagicEffectType.Flourish) ? growScale : shrinkScale;
     }
-}
+}*/
