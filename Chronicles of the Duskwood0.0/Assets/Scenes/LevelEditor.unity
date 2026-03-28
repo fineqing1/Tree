@@ -172,6 +172,8 @@ MonoBehaviour:
   cellHeight: 1
   gridOrigin: {x: -13, y: -9, z: 0}
   floorTile: {fileID: 883100001, guid: deadbeefdeadbeefdeadbeefdead0001, type: 3}
+  waterTile: {fileID: 1573608295426866938, guid: 3f8e396fffad7094492f137b123c03c1, type: 3}
+  treeTile: {fileID: 7099611537864367695, guid: 30dd49bef86097d43b3c1a271e29ffcd, type: 3}
   levelSceneNamePrefix: 'Level '
   targetLevelScene: {fileID: 102900000, guid: f00df00df00df00df00df00df00df00d, type: 3}
 --- !u!1660057539 &9223372036854775807

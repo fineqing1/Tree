@@ -3,7 +3,9 @@ using UnityEngine;
 public enum LevelElementType
 {
     Empty,
-    Floor
+    Floor,
+    Water,
+    Tree
 }
 
 public class LevelElementMarker : MonoBehaviour

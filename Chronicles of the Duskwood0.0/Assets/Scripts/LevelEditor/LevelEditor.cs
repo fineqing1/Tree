@@ -17,8 +17,10 @@ public class LevelEditor : MonoBehaviour
     [SerializeField] private float cellHeight = 1f;
     [SerializeField] private Vector3 gridOrigin = Vector3.zero;
 
-    [Header("Floor")]
+    [Header("Tiles")]
     [SerializeField] private GameObject floorTile;
+    [SerializeField] private GameObject waterTile;
+    [SerializeField] private GameObject treeTile;
 
     [Header("Target level scene")]
     [Tooltip("在已加载场景列表中（顺序同 Hierarchy），取第一个场景名以此字符串开头的场景作为铺地目标，例如「Level 0」「Level 1」对应前缀「Level 」。")]
@@ -35,12 +37,14 @@ public class LevelEditor : MonoBehaviour
     public float CellHeight { get => cellHeight; set => cellHeight = value; }
     public Vector3 GridOrigin { get => gridOrigin; set => gridOrigin = value; }
     public GameObject FloorPrefab { get => floorTile; set => floorTile = value; }
+    public GameObject WaterPrefab { get => waterTile; set => waterTile = value; }
+    public GameObject TreePrefab { get => treeTile; set => treeTile = value; }
 
 #if UNITY_EDITOR
     public SceneAsset TargetLevelScene { get => targetLevelScene; set => targetLevelScene = value; }
 #endif
 
-    readonly Dictionary<Vector2Int, GameObject> floorObjects = new Dictionary<Vector2Int, GameObject>();
+    readonly Dictionary<Vector2Int, GameObject> cellObjects = new Dictionary<Vector2Int, GameObject>();
     Transform floorParent;
 
     void Awake()
@@ -54,10 +58,10 @@ public class LevelEditor : MonoBehaviour
         }
         else
         {
-            floorObjects.Clear();
+            cellObjects.Clear();
         }
 #else
-        floorObjects.Clear();
+        cellObjects.Clear();
 #endif
     }
 
@@ -71,7 +75,7 @@ public class LevelEditor : MonoBehaviour
     {
         if (state == PlayModeStateChange.ExitingEditMode)
         {
-            floorObjects.Clear();
+            cellObjects.Clear();
             floorParent = null;
         }
     }
@@ -176,15 +180,15 @@ public class LevelEditor : MonoBehaviour
 
     void ScanExistingFloors()
     {
-        floorObjects.Clear();
+        cellObjects.Clear();
         FindFloorParent();
         if (floorParent == null) return;
 
         foreach (Transform child in floorParent)
         {
             var marker = child.GetComponent<LevelElementMarker>();
-            if (marker != null)
-                floorObjects[marker.gridPosition] = child.gameObject;
+            if (marker != null && marker.elementType != LevelElementType.Empty)
+                cellObjects[marker.gridPosition] = child.gameObject;
         }
     }
 
@@ -219,6 +223,21 @@ public class LevelEditor : MonoBehaviour
         return pos.x >= 0 && pos.x < gridWidth && pos.y >= 0 && pos.y < gridHeight;
     }
 
+    /// <summary>
+    /// 从 <see cref="cellObjects"/> 取格子上的实例。若引用已被 Undo/销毁但字典未更新，视为无物体并移除陈旧项
+    /// （避免对已销毁对象调用 GetComponent 触发 MissingReferenceException）。
+    /// </summary>
+    bool TryGetLiveTileFromCache(Vector2Int pos, out GameObject go)
+    {
+        go = null;
+        if (!cellObjects.TryGetValue(pos, out go))
+            return false;
+        if (go != null)
+            return true;
+        cellObjects.Remove(pos);
+        return false;
+    }
+
 #if UNITY_EDITOR
     void EnsureFloorParentInTargetScene()
     {
@@ -248,55 +267,142 @@ public class LevelEditor : MonoBehaviour
         EditorSceneManager.MarkSceneDirty(targetScene);
     }
 
-    void SetFloorSpriteSorting(GameObject obj, int gridY)
+    void SetTileSpriteSorting(GameObject obj, int gridY)
     {
         int order = -1 - gridY;
         foreach (var sr in obj.GetComponentsInChildren<SpriteRenderer>(true))
             sr.sortingOrder = order;
+    }
+
+    GameObject PrefabForType(LevelElementType type)
+    {
+        switch (type)
+        {
+            case LevelElementType.Floor: return floorTile;
+            case LevelElementType.Water: return waterTile;
+            case LevelElementType.Tree: return treeTile;
+            default: return null;
+        }
+    }
+
+    static string TileNamePrefix(LevelElementType type)
+    {
+        switch (type)
+        {
+            case LevelElementType.Floor: return "Floor";
+            case LevelElementType.Water: return "Water";
+            case LevelElementType.Tree: return "Tree";
+            default: return "Tile";
+        }
+    }
+
+    /// <summary>同步删除格子上的瓦片（用于替换类型时立即腾出格子）。</summary>
+    void RemoveTileAtImmediate(Vector2Int pos)
+    {
+        GameObject obj = null;
+        if (!TryGetLiveTileFromCache(pos, out obj))
+        {
+            EnsureFloorParentInTargetScene();
+            if (floorParent == null) return;
+            foreach (Transform child in floorParent)
+            {
+                var marker = child.GetComponent<LevelElementMarker>();
+                if (marker != null && marker.gridPosition == pos)
+                {
+                    obj = child.gameObject;
+                    break;
+                }
+            }
+        }
+
+        if (obj == null) return;
+
+        cellObjects.Remove(pos);
+        if (Selection.activeGameObject == obj)
+            Selection.activeGameObject = null;
+
+        Undo.DestroyObjectImmediate(obj);
+    }
+
+    /// <summary>在格子上放置指定类型瓦片；若已有其他类型会先替换。</summary>
+    public void PlaceTileAt(Vector2Int pos, LevelElementType type)
+    {
+        if (type == LevelElementType.Empty) return;
+        if (!IsValidGridPosition(pos)) return;
+
+        var prefab = PrefabForType(type);
+        if (prefab == null)
+        {
+            Debug.LogWarning($"{type} prefab is not assigned on LevelEditor.");
+            return;
+        }
+
+        EnsureFloorParentInTargetScene();
+        if (floorParent == null) return;
+
+        if (TryGetLiveTileFromCache(pos, out GameObject existing))
+        {
+            var em = existing.GetComponent<LevelElementMarker>();
+            if (em != null && em.elementType == type)
+                return;
+        }
+        else
+        {
+            foreach (Transform child in floorParent)
+            {
+                var em = child.GetComponent<LevelElementMarker>();
+                if (em != null && em.gridPosition == pos)
+                {
+                    if (em.elementType == type)
+                        return;
+                    break;
+                }
+            }
+        }
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName($"Place {type}");
+        int undoGroup = Undo.GetCurrentGroup();
+
+        RemoveTileAtImmediate(pos);
+
+        Vector3 worldPos = GridToWorld(pos);
+        GameObject obj = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        Undo.RegisterCreatedObjectUndo(obj, $"Place {type}");
+        obj.transform.SetParent(floorParent);
+        obj.transform.position = worldPos;
+        obj.name = $"{TileNamePrefix(type)}_{pos.x}_{pos.y}";
+
+        var marker = obj.GetComponent<LevelElementMarker>();
+        if (marker == null) marker = obj.AddComponent<LevelElementMarker>();
+        marker.elementType = type;
+        marker.gridPosition = pos;
+
+        SetTileSpriteSorting(obj, pos.y);
+
+        cellObjects[pos] = obj;
+
+        Undo.CollapseUndoOperations(undoGroup);
+
+        Scene targetScene = ResolveTargetScene();
+        if (targetScene.IsValid()) EditorSceneManager.MarkSceneDirty(targetScene);
     }
 #endif
 
     public void PlaceFloorAt(Vector2Int pos)
     {
 #if UNITY_EDITOR
-        if (!IsValidGridPosition(pos)) return;
-        if (HasFloorAt(pos)) return;
-
-        if (floorTile == null)
-        {
-            Debug.LogWarning("Floor prefab is not assigned.");
-            return;
-        }
-
-        EnsureFloorParentInTargetScene();
-
-        Vector3 worldPos = GridToWorld(pos);
-        GameObject obj = (GameObject)PrefabUtility.InstantiatePrefab(floorTile);
-        obj.transform.SetParent(floorParent);
-        obj.transform.position = worldPos;
-        obj.name = $"Floor_{pos.x}_{pos.y}";
-
-        var marker = obj.GetComponent<LevelElementMarker>();
-        if (marker == null) marker = obj.AddComponent<LevelElementMarker>();
-        marker.elementType = LevelElementType.Floor;
-        marker.gridPosition = pos;
-
-        SetFloorSpriteSorting(obj, pos.y);
-
-        floorObjects[pos] = obj;
-
-        Scene targetScene = ResolveTargetScene();
-        if (targetScene.IsValid()) EditorSceneManager.MarkSceneDirty(targetScene);
+        PlaceTileAt(pos, LevelElementType.Floor);
 #endif
     }
 
     public void RemoveFloorAt(Vector2Int pos)
     {
 #if UNITY_EDITOR
-        if (floorObjects.TryGetValue(pos, out GameObject obj))
+        if (TryGetLiveTileFromCache(pos, out GameObject obj))
         {
             GameObject toDestroy = obj;
-            floorObjects.Remove(pos);
+            cellObjects.Remove(pos);
 
             if (Selection.activeGameObject == toDestroy)
                 Selection.activeGameObject = null;
@@ -341,7 +447,8 @@ public class LevelEditor : MonoBehaviour
 
     public bool HasFloorAt(Vector2Int pos)
     {
-        if (floorObjects.ContainsKey(pos)) return true;
+        if (TryGetLiveTileFromCache(pos, out _))
+            return true;
 
 #if UNITY_EDITOR
         EnsureFloorParentInTargetScene();
@@ -350,7 +457,8 @@ public class LevelEditor : MonoBehaviour
             foreach (Transform child in floorParent)
             {
                 var marker = child.GetComponent<LevelElementMarker>();
-                if (marker != null && marker.gridPosition == pos)
+                if (marker != null && marker.elementType != LevelElementType.Empty &&
+                    marker.gridPosition == pos)
                     return true;
             }
         }
@@ -370,7 +478,7 @@ public class LevelEditor : MonoBehaviour
                 Undo.DestroyObjectImmediate(floorParent.GetChild(i).gameObject);
         }
 
-        floorObjects.Clear();
+        cellObjects.Clear();
 
         Scene targetScene = ResolveTargetScene();
         if (targetScene.IsValid())

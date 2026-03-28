@@ -8,6 +8,7 @@ public class LevelEditorWindow : EditorWindow
     LevelEditor levelEditor;
     bool isEditMode = true;
     bool showGrid = true;
+    LevelElementType paintBrush = LevelElementType.Floor;
     Vector2Int lastGridPos = new Vector2Int(-1, -1);
     Vector2 scroll;
 
@@ -88,7 +89,7 @@ public class LevelEditorWindow : EditorWindow
 
         EditorGUILayout.LabelField("目标关卡", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "瓦片会写入「已加载场景列表」里，场景名以左侧前缀开头且顺序最靠前的那一个（与 Hierarchy 中场景顺序一致）。例如先加载 LevelEditor，再 Additive 打开 Level 0，则写入 Level 0。",
+            "地板/水/树会写入「已加载场景列表」里，场景名以左侧前缀开头且顺序最靠前的那一个（与 Hierarchy 中场景顺序一致）。例如先加载 LevelEditor，再 Additive 打开 Level 0，则写入 Level 0。",
             MessageType.Info);
         var so = new SerializedObject(levelEditor);
         so.Update();
@@ -109,7 +110,7 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.LabelField("模式", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
         GUI.backgroundColor = isEditMode ? Color.green : Color.white;
-        if (GUILayout.Button("编辑（左键铺地板 / 右键擦掉）", GUILayout.Height(26)))
+        if (GUILayout.Button("编辑（左键铺瓦片 / 右键擦掉）", GUILayout.Height(26)))
         {
             isEditMode = true;
             SceneView.RepaintAll();
@@ -126,14 +127,22 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("瓦片笔刷", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        DrawBrushButton(LevelElementType.Floor, "地板", new Color(0.4f, 0.85f, 0.45f));
+        DrawBrushButton(LevelElementType.Water, "水", new Color(0.35f, 0.75f, 1f));
+        DrawBrushButton(LevelElementType.Tree, "树", new Color(0.45f, 0.65f, 0.35f));
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(8);
         EditorGUILayout.LabelField("操作", EditorStyles.boldLabel);
         if (GUILayout.Button("保存关卡场景", GUILayout.Height(28)))
             levelEditor.SaveScene();
 
         GUI.backgroundColor = new Color(1f, 0.55f, 0.55f);
-        if (GUILayout.Button("清空全部地板", GUILayout.Height(28)))
+        if (GUILayout.Button("清空全部瓦片", GUILayout.Height(28)))
         {
-            if (EditorUtility.DisplayDialog("清空", "删除目标关卡中 FloorElements 下所有地板？", "确定", "取消"))
+            if (EditorUtility.DisplayDialog("清空", "删除目标关卡中 FloorElements 下所有瓦片（地板/水/树）？", "确定", "取消"))
                 levelEditor.ClearLevel();
         }
 
@@ -181,16 +190,33 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space(8);
-        EditorGUILayout.LabelField("地板预制体", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("瓦片预制体", EditorStyles.boldLabel);
         EditorGUI.BeginChangeCheck();
-        var floor = (GameObject)EditorGUILayout.ObjectField(levelEditor.FloorPrefab, typeof(GameObject), false);
+        var floor = (GameObject)EditorGUILayout.ObjectField("地板", levelEditor.FloorPrefab, typeof(GameObject), false);
+        var water = (GameObject)EditorGUILayout.ObjectField("水", levelEditor.WaterPrefab, typeof(GameObject), false);
+        var tree = (GameObject)EditorGUILayout.ObjectField("树", levelEditor.TreePrefab, typeof(GameObject), false);
         if (EditorGUI.EndChangeCheck())
         {
-            Undo.RecordObject(levelEditor, "Floor prefab");
+            Undo.RecordObject(levelEditor, "Tile prefabs");
             levelEditor.FloorPrefab = floor;
+            levelEditor.WaterPrefab = water;
+            levelEditor.TreePrefab = tree;
         }
 
         EditorGUILayout.EndScrollView();
+    }
+
+    void DrawBrushButton(LevelElementType type, string label, Color accent)
+    {
+        var prev = GUI.backgroundColor;
+        GUI.backgroundColor = paintBrush == type ? accent : Color.white;
+        if (GUILayout.Button(label, GUILayout.Height(24)))
+        {
+            paintBrush = type;
+            SceneView.RepaintAll();
+        }
+
+        GUI.backgroundColor = prev;
     }
 
     void OnSceneGUI(SceneView sv)
@@ -213,7 +239,7 @@ public class LevelEditorWindow : EditorWindow
                 levelEditor.CellWidth, levelEditor.CellHeight);
 
         if (valid && isEditMode)
-            DrawHover(gridPos, levelEditor.GridOrigin, levelEditor.CellWidth, levelEditor.CellHeight);
+            DrawHover(gridPos, levelEditor.GridOrigin, levelEditor.CellWidth, levelEditor.CellHeight, paintBrush);
 
         if (!isEditMode) return;
 
@@ -223,7 +249,7 @@ public class LevelEditorWindow : EditorWindow
         if (e.type == EventType.MouseDown && e.button == 0 && valid)
         {
             lastGridPos = gridPos;
-            levelEditor.PlaceFloorAt(gridPos);
+            levelEditor.PlaceTileAt(gridPos, paintBrush);
             e.Use();
             sv.Repaint();
         }
@@ -235,7 +261,7 @@ public class LevelEditorWindow : EditorWindow
                 foreach (var c in CellsOnGridLine(lastGridPos, gridPos))
                 {
                     if (c.x < 0 || c.x >= gw || c.y < 0 || c.y >= gh) continue;
-                    levelEditor.PlaceFloorAt(c);
+                    levelEditor.PlaceTileAt(c, paintBrush);
                 }
 
                 lastGridPos = gridPos;
@@ -243,7 +269,7 @@ public class LevelEditorWindow : EditorWindow
             else if (valid && lastGridPos.x < 0)
             {
                 lastGridPos = gridPos;
-                levelEditor.PlaceFloorAt(gridPos);
+                levelEditor.PlaceTileAt(gridPos, paintBrush);
             }
 
             e.Use();
@@ -347,14 +373,29 @@ public class LevelEditorWindow : EditorWindow
         Handles.DrawLine(origin + new Vector3(0f, height * cellH, 0f), origin);
     }
 
-    static void DrawHover(Vector2Int gridPos, Vector3 origin, float cellW, float cellH)
+    static void DrawHover(Vector2Int gridPos, Vector3 origin, float cellW, float cellH, LevelElementType brush)
     {
         var center = origin + new Vector3(
             gridPos.x * cellW + cellW / 2f,
             gridPos.y * cellH + cellH / 2f,
             0f);
-        var fill = new Color(0.5f, 1f, 0.5f, 0.25f);
-        var outline = Color.green;
+        Color fill;
+        Color outline;
+        switch (brush)
+        {
+            case LevelElementType.Water:
+                fill = new Color(0.35f, 0.75f, 1f, 0.28f);
+                outline = new Color(0.2f, 0.55f, 1f);
+                break;
+            case LevelElementType.Tree:
+                fill = new Color(0.35f, 0.7f, 0.25f, 0.28f);
+                outline = new Color(0.2f, 0.5f, 0.15f);
+                break;
+            default:
+                fill = new Color(0.5f, 1f, 0.5f, 0.25f);
+                outline = Color.green;
+                break;
+        }
         Handles.DrawSolidRectangleWithOutline(
             new[]
             {
