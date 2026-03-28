@@ -1,0 +1,10 @@
+using UnityEngine;
+
+public class RottenWood : MonoBehaviour
+{
+    public void Explode()
+    {
+        // ²¥·ÅÆÆËéÌØÐ§...
+        Destroy(gameObject);
+    }
+}
